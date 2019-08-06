@@ -2,55 +2,48 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
-
-public class Mover : MonoBehaviour
+namespace RPGCC.Movement
 {
-    private NavMeshAgent m_rcAgent;
-    Animator m_rcAnimator;
-
-    Ray lastRay;
-    // Start is called before the first frame update
-    void Start()
+    public class Mover : MonoBehaviour
     {
-        m_rcAgent = GetComponent<NavMeshAgent>();
-        m_rcAnimator = GetComponent<Animator>();
-    }
+        private NavMeshAgent m_rcAgent;
+        Animator m_rcAnimator;
+        private Vector3 lastVelocity;
 
-    public void OnUserClick ()
-    {
-              
-    }
-
-    void MoveToCursor ()
-    {
-        lastRay = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit hit;
-        bool hasHit = Physics.Raycast(lastRay, out hit);
-        if(hasHit)
+        Ray lastRay;
+        // Start is called before the first frame update
+        void Start()
         {
-            m_rcAgent.SetDestination(hit.point);
-            
+            m_rcAgent = GetComponent<NavMeshAgent>();
+            m_rcAnimator = GetComponent<Animator>();
         }
-        
-    }
 
-    void UpdateAnimator ()
-    {
-        Vector3 globalVelocity = m_rcAgent.velocity;
-        Vector3 localVelocity = transform.InverseTransformDirection(globalVelocity);
-        m_rcAnimator.SetFloat("forwardSpeed", localVelocity.z);
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        if(Input.GetMouseButton(0))
+        public void MoveTo (Vector3 i_rcDestination)
         {
-           MoveToCursor();
+            m_rcAgent.isStopped = false;
+            m_rcAgent.SetDestination(i_rcDestination);
         }
-        UpdateAnimator();
-        Debug.DrawRay(lastRay.origin, lastRay.direction*100, Color.red);
 
-        
+        public void Stop()
+        {
+            m_rcAgent.isStopped = true;
+        }
+
+        public void UpdateAnimator ()
+        {
+            Vector3 globalVelocity = m_rcAgent.velocity;
+            Vector3 localVelocity = transform.InverseTransformDirection(globalVelocity);
+            m_rcAnimator.SetFloat("forwardSpeed", localVelocity.z);
+        }
+
+        // Update is called once per frame
+        void Update()
+        {
+            if(!lastVelocity.Equals(m_rcAgent.velocity))
+            {
+                lastVelocity = m_rcAgent.velocity;
+                UpdateAnimator();
+            }
+        }
     }
 }
