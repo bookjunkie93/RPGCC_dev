@@ -7,11 +7,12 @@ using RPGCC.Core;
 namespace RPGCC.Control
 {
 
-    public class PlayerController : IAgentController
+    public class PlayerController : MonoBehaviour
     {
-        [SerializeField]
         Mover m_rcMovementController;
         Fighter m_rcCombatController;
+        AgentController m_rcController;
+        Health m_rcHealth;
         [SerializeField]
         int MoveButton;
         [SerializeField]
@@ -21,6 +22,11 @@ namespace RPGCC.Control
         // Start is called before the first frame update
         void Start()
         {
+            m_rcController = GetComponent<AgentController>();
+            if(m_rcController == null)
+            {
+                throw new System.MissingMemberException("the Player is Missing its CharacterController Component!");
+            }
             m_rcMovementController = GetComponent<Mover>();
             if(m_rcMovementController == null)
             {
@@ -31,42 +37,28 @@ namespace RPGCC.Control
             {
                 throw new System.MissingMemberException("The Player is missing its Fighter Component!");
             }
+            m_rcHealth = GetComponent<Health>();
+            if(m_rcHealth == null)
+            {
+                throw new System.MissingMemberException("The Player is missing its Health Component!");
+            }
         }
         private Ray GetMouseRay ()
         {
             return Camera.main.ScreenPointToRay(Input.mousePosition);
         }
 
-        public void MoveToTarget(Vector3 target)
-        {
-            Disengage();
-            if(m_rcMovementController != null)
-            {
-                m_rcMovementController.MoveTo(target);
-            }
-            
-        }
-
-        public void Attack(Transform target)
-        {
-            throw new System.NotImplementedException();
-        }
-
-	    public void Disengage()
-        {
-            m_rcCombatController.CancelAttack();
-        }
-
-        public override bool InteractWithMovement()
+        public bool InteractWithMovement()
         {
             Ray ray = GetMouseRay();
             RaycastHit hit;
             bool hasHit = Physics.Raycast(ray, out hit);
             if (hasHit)
             {
-                if(Input.GetMouseButton(MoveButton))
+                MoveToTargetCommand moveCommand = m_rcController.MoveToTarget(m_rcMovementController, hit.point);
+                if (Input.GetMouseButton(MoveButton))
                 {
-                    MoveToTarget(hit.point);
+                    moveCommand.Execute();
                 }
                 return true;
             }
@@ -74,18 +66,20 @@ namespace RPGCC.Control
             return false;
         }
 
-        public override bool InteractWithCombat()
+        public bool InteractWithCombat()
         {
             RaycastHit[] hits = Physics.RaycastAll(GetMouseRay());
             foreach(RaycastHit hit in hits)
             {
                 if(hit.transform.GetComponent<CombatTarget>())
                 {
-                    if(m_rcCombatController != null)
+                    if(m_rcCombatController != null && m_rcCombatController.CanAttack(hit.transform.gameObject))
                     {
-                        if(Input.GetMouseButtonDown(AttackButton)) 
+                        
+                        if(Input.GetMouseButton(AttackButton)) 
                         {
-                            m_rcCombatController.Attack(hit.transform.GetComponent<CombatTarget>());
+                            AttackCommand attack = m_rcController.Attack(hit.transform);
+                            attack.Execute(m_rcCombatController);
                         }
                         return true;
                     }
@@ -94,14 +88,21 @@ namespace RPGCC.Control
             return false;
         }
 
-        void RunInteractQueue()
+        public void RunInteractQueue()
         {
-            if (InteractWithCombat()) return;
-            if (InteractWithMovement()) return;
+            if(!GetComponent<Health>().IsDead)
+            {
+                if (InteractWithCombat()) return;
+                if (InteractWithMovement()) return;
+            }
         }
-	    // Update is called once per frame
+
+
+
+        // Update is called once per frame
 	    void Update()
         {
+            
             RunInteractQueue();          
         }
 

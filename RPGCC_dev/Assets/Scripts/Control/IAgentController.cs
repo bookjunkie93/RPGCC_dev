@@ -1,14 +1,17 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using RPGCC.Movement;
+using RPGCC.Combat;
+
 
 namespace RPGCC.Control
 {
-    public abstract class IAgentController : MonoBehaviour
+    public interface IAgentController
     {
-        public abstract bool InteractWithMovement();
-
-        public abstract bool InteractWithCombat();
-         
+        MoveToTargetCommand MoveToTarget(Mover mover, Vector3 target);
+        AttackCommand Attack(Transform target);
+        AnimatorSetTriggerCommand TriggerAnimation (string trigger);
     }
+
 }

@@ -5,8 +5,8 @@ using UnityEngine;
 using UnityEngine.AI;
 using RPGCC.Movement;
 using RPGCC.Combat;
-using RPGCC.Control;
-namespace RPGCC.Core
+using RPGCC.Core;
+namespace RPGCC.Control
 {
     #region Base Commands
     public abstract class Command
@@ -54,7 +54,7 @@ namespace RPGCC.Core
             if (mover != null)
             {
                 start = mover.transform.position;
-                mover.MoveTo(target);
+                mover.StartMoveAction(target);
             }
         }
 
@@ -62,7 +62,7 @@ namespace RPGCC.Core
         {
             if(mover != null)
             {
-                mover.MoveTo(start);
+                mover.StartMoveAction(start);
             }
         }
     }
@@ -75,6 +75,23 @@ namespace RPGCC.Core
             {
                 mover.UpdateAnimator();
             }
+        }
+        public override void UnExecute()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class JumpCommand : MoveCommand
+    {
+        float jumpHeight;
+        public JumpCommand(Mover i_mover, float i_jumpHeight) : base (i_mover)
+        {
+            jumpHeight = i_jumpHeight;
+        }
+        public override void Execute()
+        {
+            throw new NotImplementedException();
         }
         public override void UnExecute()
         {
@@ -103,8 +120,8 @@ namespace RPGCC.Core
     }
     public class AttackCommand : FightCommand
     {
-        CombatTarget target;
-        public AttackCommand(CombatTarget inputTarget)
+        Transform target;
+        public AttackCommand(Transform inputTarget)
         {
             target = inputTarget;
         }
@@ -117,6 +134,13 @@ namespace RPGCC.Core
             }
         }
     }
+    public class CancelAttackCommand : FightCommand
+    {
+        public override void Execute(Fighter fighter)
+        {
+            fighter.Cancel();
+        }
+    }
     #endregion
     #region Agent Commands
     public abstract class AgentCommand
@@ -127,34 +151,58 @@ namespace RPGCC.Core
     {
         public override void Execute (IAgentController @agent){}
     }
-    public class InteractWithMovementCommand : AgentCommand
+    #endregion
+    #region Animator Commands
+    public abstract class AnimatorCommand
     {
-        public override void Execute(IAgentController agent)
+        public abstract void Execute(Animator @animator);
+    }
+
+    public class NullAnimatorCommand : AnimatorCommand
+    {
+        public override void Execute(Animator animator)
         {
-            if(agent != null)
+            
+        }
+    }
+    public class AnimatorSetTriggerCommand : AnimatorCommand
+    {
+        string trigger;
+        public AnimatorSetTriggerCommand(string i_trigger)
+        {
+            trigger = i_trigger;
+        }
+        public override void Execute(Animator animator)
+        {
+            if(animator != null)
             {
-                agent.InteractWithMovement();
+                animator.SetTrigger(trigger);
             }
         }
     }
-    public class InteractWithCombatCommand : AgentCommand
+    #endregion
+    #region ActionCommands
+    public abstract class ActionCommand : Command
     {
-        public override void Execute(IAgentController agent)
+        public IAction action;
+        public ActionCommand(IAction i_rcAction)
         {
-            if(agent != null)
-            {
-                agent.InteractWithCombat();
-            }
+            action = i_rcAction;
         }
     }
-    public class CancelMovementCommand : AgentCommand
+    public class CancelActionCommand : ActionCommand
     {
-        public override void Execute(IAgentController agent)
+        public CancelActionCommand(IAction i_rcAction) : base (i_rcAction){}
+        public override void Execute()
         {
-            if(agent != null)
+            if (action != null)
             {
-                agent.CancelMovement();
+                action.Cancel();
             }
+        }
+        public override void UnExecute()
+        {
+            throw new NotImplementedException();
         }
     }
     #endregion
@@ -175,12 +223,16 @@ namespace RPGCC.Core
     }
     public class OnAttackCommand : CombatTargetCommand
     {
-        public OnAttackCommand(CombatTarget i_target):base(i_target) {}
+        float attackDamage;
+        public OnAttackCommand(CombatTarget i_target, float i_AttackDamage):base(i_target)
+        {
+            attackDamage = i_AttackDamage;
+        }
         public override void Execute()
         {
             if(target != null)
             {
-                target.OnAttack();
+                target.OnAttack(attackDamage);
             }
         }
 
